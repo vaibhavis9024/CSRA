@@ -22,10 +22,14 @@ class Settings(BaseSettings):
     api_port: int = 8000
     log_level: str = "INFO"
 
-    # LLM
-    llm_provider: str = "openai"
-    llm_model_name: str = "gpt-4o-mini"
-    llm_api_key: SecretStr | None = None
+    # Cloudflare Workers AI
+    cloudflare_api_key: SecretStr | None = None
+    cloudflare_account_id: str | None = None
+    cloudflare_base_url: str | None = None
+
+    # Application LLM Defaults
+    llm_provider: str = "cloudflare"
+    llm_model_name: str = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 
 
 @lru_cache

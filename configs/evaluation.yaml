@@ -1,0 +1,42 @@
+# CSRA Model Capability Evaluation Configuration (Cloudflare Workers AI)
+# Uses Cloudflare's OpenAI-compatible endpoint:
+#   https://api.cloudflare.com/client/v4/accounts/<CLOUDFLARE_ACCOUNT_ID>/ai/v1
+# Note: On Cloudflare Workers Free, all models below run within the free 10,000 Neurons/day tier.
+
+dataset_path: data/evals/capability_cases.jsonl
+dataset_version: csra_capability_v1
+results_dir: data/evals/results
+
+concurrency: 2
+timeout_seconds: 60
+max_retries: 2
+retry_backoff_seconds: 2.0
+temperature: 0.0
+max_tokens: 1024
+
+# Optional LLM judge for subjective capabilities (multi_step_reasoning, customer_communication, knowledge_retrieval).
+# Uses an active free-tier model distinct from the 5 evaluated models.
+judge:
+  enabled: true
+  model_id: "@cf/ibm-granite/granite-4.0-h-micro"
+
+models:
+  - id: "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+    name: Llama 3.3 70B
+    enabled: true
+
+  - id: "@cf/mistralai/mistral-small-3.1-24b-instruct"
+    name: Mistral Small 3.1
+    enabled: true
+
+  - id: "@cf/google/gemma-4-26b-a4b-it"
+    name: Gemma 4 26B
+    enabled: true
+
+  - id: "@cf/qwen/qwen3.8-27b"
+    name: Qwen 3.8 27B
+    enabled: true
+
+  - id: "@cf/zai-org/glm-4.7-flash"
+    name: GLM 4.7 Flash
+    enabled: true

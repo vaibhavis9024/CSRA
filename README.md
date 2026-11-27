@@ -1,53 +1,50 @@
 # CSRA — Customer Support Resolution Agent
 
-An agentic AI system designed to handle customer support queries through investigation, policy retrieval, tool usage, and controlled action execution.
+**CSRA (Customer Support Resolution Agent)** is an agentic AI customer support portfolio project designed to understand customer issues, investigate them using tools, retrieve relevant policies, propose resolutions, and execute permitted actions under controlled conditions.
 
-## Overview
+## Current Status
 
-CSRA aims to go beyond traditional chatbots by enabling an AI agent to investigate customer issues, gather relevant information from tools, determine appropriate resolutions, and execute authorized actions.
+- **Phase 0 (Complete)**: Project scaffolding, centralized configuration (`src/csra/utils/config.py`), logging, and minimal FastAPI app (`src/csra/main.py`).
+- **Phase 1 (Complete)**: Capability-based **Cloudflare Workers AI** LLM evaluation pipeline (`evals/`) benchmarking models across 8 core CSRA capabilities using 40 realistic cases.
+- **Phase 2 (Next)**: LangGraph agent workflow, simulated tools, and policy retrieval.
 
-The system follows a controlled workflow where LLM-generated decisions are validated by deterministic business logic before actions are executed.
+## Quick Start
 
-## Workflow
+1. **Install dependencies** (Python 3.12+):
 
-**Understand → Investigate → Retrieve Policies → Decide → Validate → Execute → Verify → Respond**
+   ```bash
+   pip install -e ".[dev]"
+   ```
 
-- Understand customer intent and extract relevant information.
-- Investigate issues using tools and available data.
-- Retrieve relevant policies and knowledge.
-- Propose appropriate resolutions.
-- Validate permissions, eligibility, and action constraints.
-- Execute authorized actions and verify outcomes.
-- Escalate uncertain or restricted cases when necessary.
+2. **Configure Cloudflare Workers AI** in `.env`:
 
-## Tech Stack
+   ```env
+   CLOUDFLARE_API_KEY=your-cloudflare-api-token
+   CLOUDFLARE_ACCOUNT_ID=your-cloudflare-account-id
+   ```
 
-- Python
-- FastAPI
-- LangGraph
-- LLM APIs
-- Pydantic
-- PostgreSQL
-- Qdrant
-- Docker
-- Pytest
+3. **Run tests**:
 
-## Engineering Focus
+   ```bash
+   pytest
+   ```
 
-- Stateful agent workflows
-- Tool calling and orchestration
-- RAG-based policy retrieval
-- Deterministic validation and authorization
-- Human-in-the-loop approval
-- Failure handling and action verification
-- Agent evaluation and observability
+4. **Run capability evaluation**:
 
-## Project Status 🚧
+   ```bash
+   # Smoke test (8 cases)
+   python -m evals.run_evaluation --smoke
 
-**In Development** — Currently in the system design and initial implementation phase.
+   # Full evaluation (40 cases)
+   python -m evals.run_evaluation
 
-This project uses simulated data and tools for experimentation and is not connected to real customer systems.
+   # Inspect failures or history
+   python -m evals.run_evaluation --show-failures
+   python -m evals.run_evaluation --history
+   ```
 
----
+5. **Run the FastAPI server**:
 
-Built as a portfolio project exploring reliable, controlled, and evaluable agentic AI systems.
+   ```bash
+   uvicorn csra.main:app --reload
+   ```
