@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 
-from evals.models.adapters.base import (
+from evals.models.base import (
     AdapterError,
     BaseModelAdapter,
     NormalizedResponse,

@@ -8,7 +8,7 @@ import httpx
 import pytest
 
 from csra.utils.config import Settings
-from evals.models.adapters.cloudflare import CloudflareAdapter, build_cloudflare_base_url
+from evals.models.cloudflare import CloudflareAdapter, build_cloudflare_base_url
 from evals.models.registry import ModelRegistry, load_evaluation_config
 
 

@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from evals.models.adapters.base import BaseModelAdapter
+from evals.models.base import BaseModelAdapter
 
 
 class JudgeResult(BaseModel):

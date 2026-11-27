@@ -6,7 +6,7 @@ import json
 from typing import Any
 
 from evals.evaluation.judge import judge_response
-from evals.models.adapters.base import BaseModelAdapter, NormalizedResponse
+from evals.models.base import BaseModelAdapter, NormalizedResponse
 
 SIMULATED_TOOLS: dict[str, dict[str, Any]] = {
     "lookup_order": {

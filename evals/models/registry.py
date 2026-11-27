@@ -9,7 +9,7 @@ import yaml
 from pydantic import BaseModel, Field
 
 from csra.utils.config import Settings
-from evals.models.adapters.cloudflare import CloudflareAdapter, build_cloudflare_base_url
+from evals.models.cloudflare import CloudflareAdapter, build_cloudflare_base_url
 
 
 class ModelEntry(BaseModel):

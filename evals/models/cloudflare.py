@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from evals.models.adapters.openai_compatible import OpenAICompatibleAdapter
+from evals.models.openai_compatible import OpenAICompatibleAdapter
 
 
 def build_cloudflare_base_url(account_id: str) -> str:

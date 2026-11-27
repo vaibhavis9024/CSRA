@@ -10,8 +10,8 @@ import pytest
 from evals.evaluation.evaluators import score_deterministic
 from evals.evaluation.judge import judge_response
 from evals.evaluation.scoring import aggregate_model_summary, capability_percentage
-from evals.models.adapters.base import NormalizedResponse, ToolCall
-from evals.models.adapters.cloudflare import CloudflareAdapter, build_cloudflare_base_url
+from evals.models.base import NormalizedResponse, ToolCall
+from evals.models.cloudflare import CloudflareAdapter, build_cloudflare_base_url
 from evals.reporting.storage import read_history_csv, save_run_results
 from evals.reporting.terminal import format_comparison_table, format_failures
 from evals.run_evaluation import load_cases, main as cli_main, select_smoke_cases
