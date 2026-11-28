@@ -1,4 +1,4 @@
-"""FastAPI routes for CSRA Stage 0."""
+"""FastAPI routes for CSRA Stage 0 & Stage 1."""
 
 from __future__ import annotations
 
@@ -8,9 +8,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from csra.agent.graph import build_stage0_graph
+from csra.agent.graph import build_stage1_graph
 from csra.llm.client import LLMServiceError, create_llm_client
-from csra.schemas.support import IssueAnalysis, SupportRequest, SupportResponse
+from csra.schemas.support import (
+    InvestigationSummary,
+    IssueAnalysis,
+    SupportRequest,
+    SupportResponse,
+)
+from csra.tools.registry import ToolRegistry, get_tool_registry
 from evals.models.base import BaseModelAdapter
 
 logger = logging.getLogger(__name__)
@@ -48,12 +54,13 @@ def get_llm_client(request: Request) -> BaseModelAdapter:
 async def handle_support_request(
     payload: SupportRequest,
     llm_client: Annotated[BaseModelAdapter, Depends(get_llm_client)],
+    tool_registry: Annotated[ToolRegistry, Depends(get_tool_registry)],
 ) -> SupportResponse:
-    """Analyze an incoming customer support request using the Stage 0 LangGraph workflow."""
+    """Understand and investigate an incoming customer support request."""
     start = time.perf_counter()
     logger.info("Workflow started for session=%s", payload.session_id)
 
-    graph = build_stage0_graph(llm_client)
+    graph = build_stage1_graph(llm_client, tool_registry)
     result = await graph.ainvoke(
         {
             "session_id": payload.session_id,
@@ -65,7 +72,7 @@ async def handle_support_request(
     )
 
     duration_ms = (time.perf_counter() - start) * 1000.0
-    if result.get("processing_status") != "analyzed" or result.get("issue_analysis") is None:
+    if result.get("processing_status") == "failed" or result.get("issue_analysis") is None:
         err_type = result.get("error_type") or "workflow_error"
         status_code = ERROR_STATUS_MAP.get(err_type, 502)
         logger.warning(
@@ -76,14 +83,19 @@ async def handle_support_request(
         )
         raise HTTPException(
             status_code=status_code,
-            detail=result.get("error") or "Failed to analyze support request.",
+            detail=result.get("error") or "Failed to process support request.",
         )
 
     analysis: IssueAnalysis = result["issue_analysis"]
+    summary: InvestigationSummary | None = result.get("investigation_summary")
+    tools_executed = [r.tool_name for r in result.get("tool_results", [])]
+
     logger.info(
-        "Workflow completed for session=%s intent=%s duration_ms=%.2f",
+        "Workflow completed for session=%s intent=%s status=%s tool_calls=%d duration_ms=%.2f",
         payload.session_id,
         analysis.primary_intent,
+        summary.investigation_status if summary else "unknown",
+        len(tools_executed),
         duration_ms,
     )
 
@@ -98,4 +110,10 @@ async def handle_support_request(
         needs_clarification=analysis.needs_clarification,
         confidence=analysis.confidence,
         processing_status=result["processing_status"],
+        investigation_status=summary.investigation_status if summary else "incomplete",
+        findings=summary.findings if summary else [],
+        evidence_summary=summary.evidence_summary if summary else "",
+        unresolved_questions=summary.unresolved_questions if summary else [],
+        investigation_complete=summary.investigation_complete if summary else False,
+        tools_executed=tools_executed,
     )

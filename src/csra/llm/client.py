@@ -1,4 +1,4 @@
-"""LLM client factory and Stage 0 request-understanding call."""
+"""LLM client factory and Stage 0 / Stage 1 structured LLM calls."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import logging
 import os
 from typing import Any
 
-from csra.schemas.support import SupportRequest
+from csra.schemas.support import IssueAnalysis, SupportRequest, ToolResult
 from csra.utils.config import Settings, get_settings
 from evals.models.base import BaseModelAdapter
 from evals.models.cloudflare import CloudflareAdapter, build_cloudflare_base_url
@@ -48,6 +48,46 @@ Strict rules:
     "missing_information": ["<string>"],
     "needs_clarification": <true|false>,
     "confidence": <float 0.0-1.0>
+  }
+"""
+
+INVESTIGATION_PLAN_PROMPT = """You are the investigation planner for CSRA (Customer Support Resolution Agent).
+Your job is to decide which read-only investigation tools to call next based on the customer issue and evidence gathered so far.
+
+Strict rules:
+- Request ONLY tools from the provided available_tools list.
+- Request at most 3 tools per plan.
+- Do NOT repeat tools already called with the same arguments.
+- If you already have enough evidence to explain the issue, set investigation_complete=true and tool_requests=[].
+- If customer information is missing and cannot be looked up, list it in missing_information and set tool_requests=[].
+- Respond ONLY with valid JSON matching:
+  {
+    "tool_requests": [
+      {"tool_name": "<name>", "arguments": {"<arg>": "<val>"}, "purpose": "<why needed>"}
+    ],
+    "investigation_complete": <true|false>,
+    "missing_information": ["<string>"],
+    "investigation_reasoning_summary": "<brief summary>"
+  }
+"""
+
+INVESTIGATION_SUMMARY_PROMPT = """You are the investigation summarizer for CSRA (Customer Support Resolution Agent).
+Summarize ONLY factual findings directly supported by the tool results gathered so far.
+
+Strict rules:
+- State factual findings supported by tool outputs.
+- Explicitly note unavailable, failed, or missing information.
+- NEVER invent facts, policies, or eligibility.
+- NEVER propose a resolution or claim an action (refund, cancellation, replacement) was performed.
+- Use investigation_status from: "completed", "incomplete", "needs_clarification", "failed".
+- Respond ONLY with valid JSON matching:
+  {
+    "investigation_status": "<completed|incomplete|needs_clarification|failed>",
+    "findings": ["<factual finding>"],
+    "evidence_summary": "<concise grounded summary>",
+    "unresolved_questions": ["<string>"],
+    "customer_information_required": ["<string>"],
+    "investigation_complete": <true|false>
   }
 """
 
@@ -98,24 +138,24 @@ def create_llm_client(settings: Settings | None = None) -> CloudflareAdapter:
     )
 
 
-async def analyze_support_request(
+async def _call_json_llm(
     client: BaseModelAdapter,
-    request: SupportRequest,
+    session_id: str,
+    step_name: str,
+    system_prompt: str,
+    user_content: str,
 ) -> dict[str, Any]:
-    """Call the LLM to produce raw structured issue analysis."""
-    user_content = request.message
-    if request.order_id:
-        user_content = f"[Order ID provided in context: {request.order_id}]\n{request.message}"
-
-    logger.info("LLM request started for session=%s model=%s", request.session_id, client.model_id)
+    """Shared helper to call the LLM and parse a JSON object response."""
+    logger.info("LLM %s started for session=%s model=%s", step_name, session_id, client.model_id)
     response = await client.generate(
         messages=[{"role": "user", "content": user_content}],
-        system_prompt=STAGE0_SYSTEM_PROMPT,
+        system_prompt=system_prompt,
         response_schema={"type": "object"},
     )
     logger.info(
-        "LLM request completed for session=%s latency_ms=%.2f error_type=%s",
-        request.session_id,
+        "LLM %s completed for session=%s latency_ms=%.2f error_type=%s",
+        step_name,
+        session_id,
         response.latency_ms,
         response.error_type,
     )
@@ -141,3 +181,79 @@ async def analyze_support_request(
             ) from exc
 
     raise LLMServiceError("Empty or non-JSON response from model.", error_type="malformed_output")
+
+
+async def analyze_support_request(
+    client: BaseModelAdapter,
+    request: SupportRequest,
+) -> dict[str, Any]:
+    """Call the LLM to produce raw structured issue analysis."""
+    user_content = request.message
+    if request.order_id:
+        user_content = f"[Order ID provided in context: {request.order_id}]\n{request.message}"
+    return await _call_json_llm(
+        client=client,
+        session_id=request.session_id,
+        step_name="understand_request",
+        system_prompt=STAGE0_SYSTEM_PROMPT,
+        user_content=user_content,
+    )
+
+
+async def plan_investigation(
+    client: BaseModelAdapter,
+    session_id: str,
+    customer_id: str,
+    message: str,
+    analysis: IssueAnalysis,
+    available_tools: list[dict[str, str]],
+    tool_results: list[ToolResult],
+    iteration: int,
+    max_iterations: int,
+) -> dict[str, Any]:
+    """Call the LLM to plan the next set of read-only investigation tool calls."""
+    evidence = [r.model_dump() for r in tool_results]
+    user_content = json.dumps(
+        {
+            "customer_id": customer_id,
+            "customer_message": message,
+            "issue_analysis": analysis.model_dump(),
+            "iteration": iteration,
+            "max_iterations": max_iterations,
+            "available_tools": available_tools,
+            "evidence_so_far": evidence,
+        }
+    )
+    return await _call_json_llm(
+        client=client,
+        session_id=session_id,
+        step_name="plan_investigation",
+        system_prompt=INVESTIGATION_PLAN_PROMPT,
+        user_content=user_content,
+    )
+
+
+async def summarize_investigation(
+    client: BaseModelAdapter,
+    session_id: str,
+    message: str,
+    analysis: IssueAnalysis,
+    tool_results: list[ToolResult],
+    incomplete_reason: str | None = None,
+) -> dict[str, Any]:
+    """Call the LLM to produce an evidence-grounded investigation summary."""
+    user_content = json.dumps(
+        {
+            "customer_message": message,
+            "issue_analysis": analysis.model_dump(),
+            "tool_results": [r.model_dump() for r in tool_results],
+            "incomplete_reason": incomplete_reason,
+        }
+    )
+    return await _call_json_llm(
+        client=client,
+        session_id=session_id,
+        step_name="summarize_investigation",
+        system_prompt=INVESTIGATION_SUMMARY_PROMPT,
+        user_content=user_content,
+    )

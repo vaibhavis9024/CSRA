@@ -1,0 +1,102 @@
+{
+  "customers": {
+    "customer_101": {
+      "customer_id": "customer_101",
+      "name": "Maya Lin",
+      "tier": "standard",
+      "account_status": "active"
+    },
+    "customer_102": {
+      "customer_id": "customer_102",
+      "name": "Alex Rivera",
+      "tier": "plus",
+      "account_status": "active"
+    },
+    "customer_103": {
+      "customer_id": "customer_103",
+      "name": "Jordan Patel",
+      "tier": "standard",
+      "account_status": "active"
+    }
+  },
+  "orders": {
+    "ORD-1001": {
+      "order_id": "ORD-1001",
+      "customer_id": "customer_101",
+      "order_status": "unpaid",
+      "order_date": "2026-11-20",
+      "items": [{"name": "Nimbus Desk Lamp", "qty": 1, "unit_price": 89.50}],
+      "total_amount": 89.50
+    },
+    "ORD-1002": {
+      "order_id": "ORD-1002",
+      "customer_id": "customer_101",
+      "order_status": "delivered",
+      "order_date": "2026-11-10",
+      "items": [{"name": "Aero Wireless Mouse", "qty": 1, "unit_price": 45.00}],
+      "total_amount": 45.00
+    },
+    "ORD-1003": {
+      "order_id": "ORD-1003",
+      "customer_id": "customer_102",
+      "order_status": "in_transit",
+      "order_date": "2026-11-24",
+      "items": [{"name": "Trail Backpack", "qty": 1, "unit_price": 120.00}],
+      "total_amount": 120.00
+    },
+    "ORD-9999": {
+      "order_id": "ORD-9999",
+      "customer_id": "customer_999",
+      "order_status": "processing",
+      "order_date": "2026-11-25",
+      "items": [{"name": "Private Item", "qty": 1, "unit_price": 199.00}],
+      "total_amount": 199.00
+    }
+  },
+  "payments": {
+    "ORD-1001": {
+      "payment_id": "PAY-5001",
+      "order_id": "ORD-1001",
+      "payment_status": "deducted",
+      "amount": 89.50,
+      "transaction_ref": "TXN-88412"
+    },
+    "ORD-1002": {
+      "payment_id": "PAY-5002",
+      "order_id": "ORD-1002",
+      "payment_status": "settled",
+      "amount": 45.00,
+      "transaction_ref": "TXN-77210"
+    },
+    "ORD-1003": {
+      "payment_id": "PAY-5003",
+      "order_id": "ORD-1003",
+      "payment_status": "settled",
+      "amount": 120.00,
+      "transaction_ref": null
+    }
+  },
+  "deliveries": {
+    "ORD-1001": {
+      "order_id": "ORD-1001",
+      "shipment_status": "not_dispatched",
+      "tracking_number": null,
+      "estimated_delivery": null,
+      "delivery_exception": null
+    },
+    "ORD-1002": {
+      "order_id": "ORD-1002",
+      "shipment_status": "delivered",
+      "tracking_number": "TRK-2002",
+      "estimated_delivery": "2026-11-14",
+      "delivery_exception": null
+    },
+    "ORD-1003": {
+      "order_id": "ORD-1003",
+      "shipment_status": "delayed",
+      "tracking_number": "TRK-3003",
+      "estimated_delivery": "2026-11-29",
+      "delivery_exception": "weather_delay"
+    }
+  }
+}
