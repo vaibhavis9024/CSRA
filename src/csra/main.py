@@ -1,11 +1,14 @@
 """FastAPI application entry point for CSRA."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 import logging
 
 import uvicorn
 from fastapi import FastAPI
 
 from csra import __version__
+from csra.api.routes import router as support_router
 from csra.utils.config import get_settings
 from csra.utils.logging import setup_logging
 
@@ -14,11 +17,25 @@ setup_logging(settings.log_level)
 
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Manage startup and shutdown of shared application resources."""
+    app.state.llm_client = None
+    yield
+    client = getattr(app.state, "llm_client", None)
+    if client is not None:
+        await client.aclose()
+
+
 app = FastAPI(
     title=settings.app_name,
     version=__version__,
     description="Customer Support Resolution Agent (CSRA) API",
+    lifespan=lifespan,
 )
+
+app.include_router(support_router)
 
 
 @app.get("/", tags=["System"])
