@@ -27,9 +27,10 @@ class Settings(BaseSettings):
     cloudflare_account_id: str | None = None
     cloudflare_base_url: str | None = None
 
-    # Application LLM Defaults
+    # Application LLM Defaults (Two-Tier Routing via Cloudflare Workers AI)
     llm_provider: str = "cloudflare"
-    llm_model_name: str = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+    llm_model_name: str = "@cf/mistralai/mistral-small-3.1-24b-instruct"
+    llm_reasoning_model_name: str = "@cf/google/gemma-4-26b-a4b-it"
 
 
 @lru_cache
